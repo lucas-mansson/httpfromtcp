@@ -3,20 +3,20 @@ package main
 import (
 	"fmt"
 	"io"
-	"os"
+	"net"
 )
 
-func getLinesChannel(file io.ReadCloser) <- chan string {
+func getLinesChannel(in io.ReadCloser) <- chan string {
 	out := make(chan string, 1)
 
 	go func() {
-		defer file.Close()
+		defer in.Close()
 		defer close(out)
 
 		var currentLine string
 		for {
 			data := make([]byte, 8) // Allocate and initialize empty array of 8 bytes
-			nbrBytes, err := file.Read(data) // reads 8 bytes from file and stores in data
+			nbrBytes, err := in.Read(data) // reads 8 bytes from file and stores in data
 
 			if err == io.EOF { break }
 			if err != nil { panic(err) }
@@ -37,13 +37,26 @@ func getLinesChannel(file io.ReadCloser) <- chan string {
 }
 
 func main() {
-	file, err := os.Open("messages.txt")
+	port := ":42069"
+	listener, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)
 	}
-	lines := getLinesChannel(file)
-	for line := range lines {
-		fmt.Printf("read %s\n", line)
+	defer listener.Close()
+	defer fmt.Print("Connection closed.")
+	
+	fmt.Printf("Listening on port %s\n", port)
+	for {
+		conn, err := listener.Accept()
+		fmt.Print("Connection accepted!")
+		if err != nil {
+			panic(err)
+		}
+		lines := getLinesChannel(conn)
+		for line := range lines {
+			fmt.Printf("read %s\n", line)
+		}
 	}
+
 }
 
