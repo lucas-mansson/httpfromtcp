@@ -13,34 +13,27 @@ func getLinesChannel(in io.ReadCloser) <-chan string {
 		defer in.Close()
 		defer close(out)
 
-		var currentLine []byte
-		for {
-			data := make([]byte, 8) // read chunks of up to 8 bytes
-			nbrBytes, err := in.Read(data)
-
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				panic(err)
-			}
-
-			currentSlice := data[:nbrBytes]
-
-			for _, b := range currentSlice {
-				if b == '\n' {
-					out <- string(currentLine) // convert full UTF-8 line
-					currentLine = nil
-				} else {
-					currentLine = append(currentLine, b)
-				}
-			}
+var currentLine string
+	for {
+		data := make([]byte, 8) // Allocate and initialize empty array of bytes
+		nbrBytes, err := file.Read(data) // reads 8 bytes from file and stores in data
+		if err == io.EOF { break }
+		if err != nil { panic(err) }
+		
+		data = data[:nbrBytes]
+		if i := bytes.IndexByte(data, '\n'); i != -1 {
+			currentLine += string(data[:i])
+			data = data[i+1:]
+			fmt.Printf("read: %s\n", currentLine) 
+			currentLine = ""
 		}
+		currentLine += string(data)
+	}
 
-		// flush last line if not empty
-		if len(currentLine) > 0 {
-			out <- string(currentLine)
-		}
+	if len(currentLine) != 0 {
+		fmt.Printf("read: %s\n", currentLine) 
+	}
+
 	}()
 	return out
 }
