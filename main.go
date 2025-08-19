@@ -6,31 +6,40 @@ import (
 	"net"
 )
 
-func getLinesChannel(in io.ReadCloser) <- chan string {
+func getLinesChannel(in io.ReadCloser) <-chan string {
 	out := make(chan string, 1)
 
 	go func() {
 		defer in.Close()
 		defer close(out)
 
-		var currentLine string
+		var currentLine []byte
 		for {
-			data := make([]byte, 8) // Allocate and initialize empty array of 8 bytes
-			nbrBytes, err := in.Read(data) // reads 8 bytes from file and stores in data
+			data := make([]byte, 8) // read chunks of up to 8 bytes
+			nbrBytes, err := in.Read(data)
 
-			if err == io.EOF { break }
-			if err != nil { panic(err) }
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				panic(err)
+			}
 
 			currentSlice := data[:nbrBytes]
 
-			for _, byte := range currentSlice {
-				if byte == '\n' {
-					out <- string(currentLine)
-					currentLine = ""
+			for _, b := range currentSlice {
+				if b == '\n' {
+					out <- string(currentLine) // convert full UTF-8 line
+					currentLine = nil
 				} else {
-					currentLine += string(byte)
+					currentLine = append(currentLine, b)
 				}
 			}
+		}
+
+		// flush last line if not empty
+		if len(currentLine) > 0 {
+			out <- string(currentLine)
 		}
 	}()
 	return out
@@ -48,13 +57,12 @@ func main() {
 	fmt.Printf("Listening on port %s\n", port)
 	for {
 		conn, err := listener.Accept()
-		fmt.Print("Connection accepted!")
+		fmt.Println("Connection accepted")
 		if err != nil {
 			panic(err)
 		}
-		lines := getLinesChannel(conn)
-		for line := range lines {
-			fmt.Printf("read %s\n", line)
+		for line := range getLinesChannel(conn) {
+			fmt.Printf(line)
 		}
 	}
 
