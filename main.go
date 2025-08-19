@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -16,7 +17,7 @@ func getLinesChannel(in io.ReadCloser) <-chan string {
 var currentLine string
 	for {
 		data := make([]byte, 8) // Allocate and initialize empty array of bytes
-		nbrBytes, err := file.Read(data) // reads 8 bytes from file and stores in data
+		nbrBytes, err := in.Read(data) // reads 8 bytes from file and stores in data
 		if err == io.EOF { break }
 		if err != nil { panic(err) }
 		
