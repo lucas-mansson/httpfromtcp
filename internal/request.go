@@ -1,7 +1,6 @@
 package request
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -44,7 +43,7 @@ func parseRequestLine(request string)(*RequestLine, error) {
 	splitLine := strings.Split(unparsedLine, " ")
 	filterEmptyStrings(&splitLine); //Remove any extra whitespace
 	if len(splitLine) != 3 {
-		return &RequestLine{}, errors.New("Error parsing request line.")
+		return &RequestLine{}, fmt.Errorf("Malformed request line")
 	}
 
 	// method
@@ -65,7 +64,11 @@ func parseRequestLine(request string)(*RequestLine, error) {
 		return &RequestLine{}, err
 	}
 
-	return &RequestLine { HttpVersion: version, RequestTarget: target, Method: method }, nil
+	return &RequestLine { 
+		HttpVersion: version, 
+		RequestTarget: target, 
+		Method: method,
+	}, nil
 }
 
 func filterEmptyStrings(arr *[]string) {
@@ -81,14 +84,14 @@ func filterEmptyStrings(arr *[]string) {
 func checkMethod(method string)(string, error) {
 	allowedMethods := []string{"GET", "POST"}
 	if !slices.Contains(allowedMethods, method) {
-		return "", errors.New("Error parsing HTTP method.")
+		return "", fmt.Errorf("Unallowed HTTP method.")
 	}
 	return method, nil
 }
 
 func checkTarget(target string)(string, error) {
 	if target[0] != '/' {
-		return "", errors.New("HTTP target path doesn't start with '/'!")
+		return "", fmt.Errorf("HTTP target path doesn't start with '/'!")
 	}
 	return target, nil
 }
@@ -96,11 +99,11 @@ func checkTarget(target string)(string, error) {
 func checkVersion(version string)(string, error) {
 	splitVersion := strings.Split(version, "/")
 	if len(splitVersion) != 2 || splitVersion[0] != "HTTP" {
-		return "", errors.New("Error parsing HTTP version")
+		return "", fmt.Errorf("Error parsing HTTP version")
 	}
 	httpVersion := splitVersion[1]
 	if httpVersion != "1.1" {
-		return "", errors.New("Unsupported HTTP version")
+		return "", fmt.Errorf("Unsupported HTTP version")
 	}
 	
 	return httpVersion, nil
