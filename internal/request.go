@@ -8,14 +8,17 @@ import (
 	"slices"
 )
 
-type Request struct {
-	RequestLine RequestLine
-}
-
+// GET /path HTTP/1.1 
 type RequestLine struct {
 	Method string
 	RequestTarget string
 	HttpVersion string
+}
+
+type Request struct {
+	RequestLine RequestLine
+    // Headers     map[string]string
+   //  Body        []byte
 }
 
 func RequestFromReader(reader io.Reader)(*Request, error) {
@@ -30,40 +33,49 @@ func RequestFromReader(reader io.Reader)(*Request, error) {
 		fmt.Print(err)
 		return nil, err
 	}
-	request := Request { RequestLine: requestLine }
-
-	return &request, nil
+	return &Request { RequestLine: *requestLine }, nil
 }
 
-func parseRequestLine(request string)(RequestLine, error) {
+func parseRequestLine(request string)(*RequestLine, error) {
 	// split request
 	unparsedLine := strings.Trim(strings.Split(request, "\r\n")[0], " ")
 	
-	// [method, target, version]
+	// Get array [method, target, version]
 	splitLine := strings.Split(unparsedLine, " ")
+	filterEmptyStrings(&splitLine); //Remove any extra whitespace
 	if len(splitLine) != 3 {
-		return RequestLine{}, errors.New("Error parsing request line.")
+		return &RequestLine{}, errors.New("Error parsing request line.")
 	}
 
 	// method
 	method, err := checkMethod(splitLine[0])
 	if err != nil {
-		return RequestLine{}, err
+		return &RequestLine{}, err
 	}
 
 	// correct target
 	target, err := checkTarget(splitLine[1])
 	if err != nil {
-		return RequestLine{}, err
+		return &RequestLine{}, err
 	}
 
 	// correct version
 	version, err := checkVersion(splitLine[2])
 	if err != nil {
-		return RequestLine{}, err
+		return &RequestLine{}, err
 	}
 
-	return RequestLine { HttpVersion: version, RequestTarget: target, Method: method }, nil
+	return &RequestLine { HttpVersion: version, RequestTarget: target, Method: method }, nil
+}
+
+func filterEmptyStrings(arr *[]string) {
+    filtered := make([]string, 0, len(*arr))
+    for _, val := range *arr {
+        if val != "" {
+            filtered = append(filtered, val)
+        }
+    }
+    *arr = filtered
 }
 
 func checkMethod(method string)(string, error) {
@@ -83,7 +95,7 @@ func checkTarget(target string)(string, error) {
 
 func checkVersion(version string)(string, error) {
 	splitVersion := strings.Split(version, "/")
-	if splitVersion[0] != "HTTP" {
+	if len(splitVersion) != 2 || splitVersion[0] != "HTTP" {
 		return "", errors.New("Error parsing HTTP version")
 	}
 	httpVersion := splitVersion[1]
