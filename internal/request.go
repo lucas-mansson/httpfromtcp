@@ -1,6 +1,7 @@
 package request
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -23,16 +24,16 @@ type Request struct {
 func RequestFromReader(reader io.Reader)(*Request, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		fmt.Print(err)
-		return nil, err
+		return nil, errors.Join(fmt.Errorf("Error reading with io.ReadAll"), err)
 	}
 
 	requestLine, err := parseRequestLine(string(data))
 	if err != nil {
-		fmt.Print(err)
 		return nil, err
 	}
-	return &Request { RequestLine: *requestLine }, nil
+	return &Request { 
+		RequestLine: *requestLine,
+	}, nil
 }
 
 func parseRequestLine(request string)(*RequestLine, error) {
